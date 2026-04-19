@@ -1,7 +1,8 @@
+node_modules/
+dist/
 .env
 backend/.env
-.venv/
-node_modules/
+backend/.venv/
+.vscode/
 __pycache__/
 *.pyc
-dist/

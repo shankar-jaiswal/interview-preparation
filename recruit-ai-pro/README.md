@@ -1,8 +1,24 @@
 # Recruit AI Pro
 
-A React + Vite + Express mock interview app with Firebase persistence and Gemini-powered interview logic.
+Recruit AI Pro is an AI-powered mock interview application built with React, Vite, FastAPI, Firebase, and Groq.
 
-## Project structure
+It allows users to:
+- choose a target role
+- choose difficulty level
+- run a multi-step interview simulation
+- receive structured AI feedback
+- store session history in Firebase
+- optionally read questions aloud using text-to-speech
+
+## Tech Stack
+
+- Frontend: React + Vite
+- Backend: FastAPI
+- Database/Auth: Firebase Authentication + Firestore
+- AI Model: Groq API
+- Styling: Tailwind CSS
+
+## Project Structure
 
 ```text
 recruit-ai-pro/
@@ -12,89 +28,105 @@ recruit-ai-pro/
 ├── tailwind.config.js
 ├── vite.config.js
 ├── .env.example
+├── .gitignore
 ├── firestore.rules
-├── server/
-│   ├── index.js
-│   └── .env.example
-└── src/
-    ├── App.jsx
-    ├── index.css
-    ├── main.jsx
-    ├── components/
-    │   ├── InterviewScreen.jsx
-    │   ├── SetupScreen.jsx
-    │   └── SummaryScreen.jsx
-    ├── lib/
-    │   └── firebase.js
-    └── utils/
-        └── speech.js
-```
+├── README.md
+├── src/
+│   ├── App.jsx
+│   ├── index.css
+│   ├── main.jsx
+│   ├── components/
+│   │   ├── InterviewScreen.jsx
+│   │   ├── SetupScreen.jsx
+│   │   └── SummaryScreen.jsx
+│   ├── lib/
+│   │   └── firebase.js
+│   └── utils/
+│       └── speech.js
+└── backend/
+    ├── main.py
+    ├── requirements.txt
+    └── .env
+Features
+Multi-step interview simulation
+Role and difficulty selection
+AI-generated interview questions
+AI-generated evaluation and feedback
+Firebase anonymous authentication
+Firestore-based session persistence
+Optional voice playback with play/stop toggle
+Setup Instructions
+1. Open the project
 
-## 1. Open in VS Code
+Open the recruit-ai-pro folder in VS Code.
 
-Open the `recruit-ai-pro` folder in VS Code.
-
-## 2. Install packages
-
-Open the terminal in VS Code and run:
-
-```bash
+2. Install frontend dependencies
 npm install
-```
+3. Create environment files
 
-## 3. Add environment files
+Create a root .env file:
 
-Create a file named `.env` in the project root and copy from `.env.example`.
+VITE_API_BASE_URL=http://127.0.0.1:8000
 
-Create a file named `server/.env` and copy from `server/.env.example`.
+Create backend/.env:
 
-### Root `.env`
-
-```env
-VITE_FIREBASE_API_KEY=your_firebase_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=1234567890
-VITE_FIREBASE_APP_ID=1:1234567890:web:abcdef123456
-VITE_API_BASE_URL=http://localhost:3001
-```
-
-### `server/.env`
-
-```env
-PORT=3001
-GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
 CLIENT_ORIGIN=http://localhost:5173
-GEMINI_MODEL=gemini-1.5-flash
-```
+GROQ_MODEL=llama-3.3-70b-versatile
 
-## 4. Firebase setup
+Do not commit real API keys to GitHub.
+
+4. Firebase setup
 
 In Firebase Console:
 
-- Create a project
-- Enable **Authentication > Anonymous**
-- Create **Firestore Database**
-- Add the rules from `firestore.rules`
-- Copy your Firebase web config into the root `.env`
+create a Firebase project
+enable Authentication > Anonymous
+create Firestore Database
+add the rules from firestore.rules
+configure Firebase in src/lib/firebase.js
+5. Create Python virtual environment for backend
 
-## 5. Run the app
+From the backend folder:
 
-```bash
-npm run dev
-```
+python -m venv .venv
+6. Install backend dependencies
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+7. Run the FastAPI backend
 
-This starts:
+From the backend folder:
 
-- React client on `http://localhost:5173`
-- Express server on `http://localhost:3001`
+.\.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
+8. Run the frontend
 
-## Important note
+From the project root:
 
-Your original code used `__firebase_config`, `__initial_auth_token`, and a direct Gemini call from the browser. That works only in some hosted sandbox environments. In a normal VS Code React project:
+npm run dev:client
+9. Open the app
 
-- Firebase config must come from `.env`
-- Gemini API key should stay on the server
-- The frontend should call your Express backend, not Gemini directly
+Open:
 
+http://localhost:5173
+Backend API
+Health check
+GET /api/health
+Interview endpoint
+POST /api/interview
+
+This endpoint:
+
+receives interview state from the frontend
+sends the prompt to Groq
+returns structured JSON containing:
+next question
+score
+strengths
+improvements
+analysis
+completion state
+Notes
+Firebase config is used on the frontend.
+Groq API key must stay in backend/.env.
+Do not upload .env or backend/.env to GitHub.
+Add .env, backend/.env, .venv, and node_modules to .gitignore.

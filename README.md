@@ -47,7 +47,7 @@ recruit-ai-pro/
     ├── main.py
     ├── requirements.txt
     └── .env
-Features
+## Features
 Multi-step interview simulation
 Role and difficulty selection
 AI-generated interview questions

@@ -7,7 +7,7 @@ import SummaryScreen from './components/SummaryScreen';
 import { auth, db } from './lib/firebase';
 import { speakText, stopSpeech, getSpeechState } from './utils/speech';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -26,22 +26,30 @@ export default function App() {
   });
 
   useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-    setUser(currentUser);
-  });
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
 
-  signInAnonymously(auth).catch((error) => {
-    console.error('Anonymous sign-in failed:', error);
-    alert(error.message);
-  });
+    signInAnonymously(auth).catch((error) => {
+      console.error('Anonymous sign-in failed:', error);
+      alert(error.message);
+    });
 
-  return () => unsubscribe();
-}, []);
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!user || !session?.id) return undefined;
 
-    const historyRef = collection(db, 'artifacts', 'recruit-ai-pro', 'users', user.uid, 'history');
+    const historyRef = collection(
+      db,
+      'artifacts',
+      'recruit-ai-pro',
+      'users',
+      user.uid,
+      'history'
+    );
+
     const unsubscribeHistory = onSnapshot(historyRef, (snapshot) => {
       const items = snapshot.docs
         .map((item) => ({ id: item.id, ...item.data() }))
@@ -51,7 +59,15 @@ export default function App() {
       setHistory(items);
     });
 
-    const evaluationsRef = collection(db, 'artifacts', 'recruit-ai-pro', 'users', user.uid, 'evaluations');
+    const evaluationsRef = collection(
+      db,
+      'artifacts',
+      'recruit-ai-pro',
+      'users',
+      user.uid,
+      'evaluations'
+    );
+
     const unsubscribeEvaluations = onSnapshot(evaluationsRef, (snapshot) => {
       const items = snapshot.docs
         .map((item) => ({ id: item.id, ...item.data() }))
@@ -82,23 +98,26 @@ export default function App() {
     });
 
     const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(data.error || 'Interview API failed');
+      throw new Error(data.detail || data.error || 'Interview API failed');
     }
 
     return data;
   }
 
   async function handleStart() {
-  if (!user) {
-    alert('Please wait a moment. Firebase is still connecting.');
-    return;
-  }
+    if (!user) {
+      alert('Please wait a moment. Firebase is still connecting.');
+      return;
+    }
 
     setLoading(true);
     setFeedback(null);
     setEvaluations([]);
     setHistory([]);
+    stopSpeech();
+    setIsSpeaking(false);
 
     try {
       const sessionId = crypto.randomUUID();
@@ -108,7 +127,11 @@ export default function App() {
         createdAt: Date.now()
       };
 
-      await setDoc(doc(db, 'artifacts', 'recruit-ai-pro', 'users', user.uid, 'sessions', sessionId), newSession);
+      await setDoc(
+        doc(db, 'artifacts', 'recruit-ai-pro', 'users', user.uid, 'sessions', sessionId),
+        newSession
+      );
+
       setSession(newSession);
       setStep('interview');
 
@@ -128,7 +151,7 @@ export default function App() {
         timestamp: Date.now()
       });
 
-      speakText(firstTurn.nextQuestion);
+      // no auto voice here
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -146,6 +169,7 @@ export default function App() {
 
     try {
       const completedRounds = evaluations.length;
+
       const result = await callInterviewApi({
         role: settings.role,
         difficulty: settings.difficulty,
@@ -166,13 +190,16 @@ export default function App() {
       });
 
       if (result.feedback) {
-        await addDoc(collection(db, 'artifacts', 'recruit-ai-pro', 'users', user.uid, 'evaluations'), {
-          sessionId: session.id,
-          roundNumber: completedRounds + 1,
-          question: latestBotMessage?.text || '',
-          ...result.feedback,
-          timestamp: baseTimestamp + 1
-        });
+        await addDoc(
+          collection(db, 'artifacts', 'recruit-ai-pro', 'users', user.uid, 'evaluations'),
+          {
+            sessionId: session.id,
+            roundNumber: completedRounds + 1,
+            question: latestBotMessage?.text || '',
+            ...result.feedback,
+            timestamp: baseTimestamp + 1
+          }
+        );
         setFeedback(result.feedback);
       }
 
@@ -185,7 +212,8 @@ export default function App() {
           text: result.nextQuestion,
           timestamp: baseTimestamp + 2
         });
-        speakText(result.nextQuestion);
+
+        // no auto voice here
       }
 
       setAnswer('');
@@ -197,21 +225,32 @@ export default function App() {
     }
   }
 
- function handleSpeakCurrentQuestion() {
-  if (!latestBotMessage?.text) return;
+  function handleSpeakCurrentQuestion() {
+    if (!latestBotMessage?.text) return;
 
-  if (getSpeechState()) {
-    stopSpeech();
-    setIsSpeaking(false);
-    return;
+    if (getSpeechState()) {
+      stopSpeech();
+      setIsSpeaking(false);
+      return;
+    }
+
+    speakText(latestBotMessage.text, () => {
+      setIsSpeaking(false);
+    });
+
+    setIsSpeaking(true);
   }
 
-  speakText(latestBotMessage.text, () => {
+  function handleRestart() {
+    stopSpeech();
     setIsSpeaking(false);
-  });
-
-  setIsSpeaking(true);
-}
+    setStep('setup');
+    setSession(null);
+    setHistory([]);
+    setEvaluations([]);
+    setFeedback(null);
+    setAnswer('');
+  }
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-blue-500/30 overflow-x-hidden">
@@ -235,7 +274,7 @@ export default function App() {
           onSubmit={handleSubmit}
           onRepeatVoice={handleSpeakCurrentQuestion}
           isSpeaking={isSpeaking}
-/>
+        />
       )}
 
       {step === 'summary' && (
